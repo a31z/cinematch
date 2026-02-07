@@ -214,7 +214,7 @@ function PreferencesFormContent({ onSubmit }: PreferencesFormProps) {
 
   return (
     <div className="max-w-6xl mx-auto p-8">
-      <h1 className="mb-8 text-center">Set Your Preferences</h1>
+      <h1 className="mb-8 text-center text-red-700">Set Your Preferences</h1>
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-2 gap-8 mb-8">

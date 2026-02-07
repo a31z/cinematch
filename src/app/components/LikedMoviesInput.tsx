@@ -190,7 +190,7 @@ export function LikedMoviesInput({ onSubmit, onBack, movieDatabase }: LikedMovie
 
   return (
     <div className="max-w-3xl mx-auto p-8 font-sans">
-      <h1 className="mb-8 text-center">Step 2: Add Movies You Liked</h1>
+      <h1 className="mb-8 text-center text-red-700">Step 2: Add Movies You Liked</h1>
 
       {/* --- SAVED MOVIES ROW (POSTERS ONLY) --- */}
       {movies.some((m) => m.isSaved) && (
@@ -237,7 +237,7 @@ export function LikedMoviesInput({ onSubmit, onBack, movieDatabase }: LikedMovie
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search for a movie..."
-          className="w-full border-2 border-gray-200 rounded-none px-5 py-4 text-lg focus:border-blue-500 outline-none transition-all shadow-sm"
+          className="w-full border-2 border-gray-200 rounded-none px-5 py-4 text-lg focus:border-blue-500 outline-none transition-all shadow-sm text-white"
         />
 
         {/* DROPDOWN */}
@@ -391,7 +391,7 @@ export function LikedMoviesInput({ onSubmit, onBack, movieDatabase }: LikedMovie
         <button
           type="button"
           onClick={onBack}
-          className="border border-gray-300 px-6 py-2 hover:bg-gray-50 transition-colors"
+          className="border border-red-700 text-white px-6 py-2 font-bold hover:bg-red-700 transition-colors"
         >
           Back
         </button>
@@ -400,7 +400,7 @@ export function LikedMoviesInput({ onSubmit, onBack, movieDatabase }: LikedMovie
           type="button"
           onClick={handleSubmit}
           disabled={movies.length === 0}
-          className={`bg-primary text-primary-foreground px-6 py-2 font-bold ${
+          className={`bg-red-700 text-white text-primary-foreground px-6 py-2 font-bold ${
             movies.length === 0
               ? "opacity-50 cursor-not-allowed"
               : "hover:opacity-90"
