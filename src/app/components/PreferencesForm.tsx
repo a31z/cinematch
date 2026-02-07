@@ -220,7 +220,7 @@ function PreferencesFormContent({ onSubmit }: PreferencesFormProps) {
         <div className="grid grid-cols-2 gap-8 mb-8">
           {/* Left Section: Genre Preferences */}
           <div>
-            <h2 className="mb-4">Genre Preferences</h2>
+            <h2 className="mb-4 text-white">Genre Preferences</h2>
             <div className="flex flex-wrap gap-2">
               {GENRES.map((genre) => {
                 const isSelected = selectedGenres.includes(genre);
@@ -250,7 +250,7 @@ function PreferencesFormContent({ onSubmit }: PreferencesFormProps) {
 
           {/* Right Section: Criteria Ranking */}
           <div>
-          <h2 className="mb-1">Ranking by Importance</h2> 
+          <h2 className="mb-1 text-white">Ranking by Importance</h2> 
           <p className="text-sm text-muted-foreground mb-4">
             Drag to reorder (top = most important)
           </p>
@@ -262,7 +262,7 @@ function PreferencesFormContent({ onSubmit }: PreferencesFormProps) {
             onPacingChange={setPacingPreference}
           />
         
-          <h3 className="mt-8 mb-2">Unimportant / No preference</h3>
+          <h3 className="mt-8 mb-2 text-white">Unimportant / No preference</h3>
           <DropZone
             area="unimportant"
             criteria={unimportantCriteria}
@@ -276,7 +276,7 @@ function PreferencesFormContent({ onSubmit }: PreferencesFormProps) {
         <div className="flex justify-end">
         <button
           type="submit"
-          className="bg-primary text-primary-foreground px-6 py-2 font-bold tracking-normal"
+          className="bg-red-700 text-primary-foreground px-6 py-2 font-bold tracking-normal"
         >
           Continue
         </button>

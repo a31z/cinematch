@@ -49,7 +49,7 @@ export function HomeScreen({
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-8">
+    <div className="max-w-7xl mx-auto p-8 text-white">
       {/* Search Bar and Update Preferences Button */}
       <div className="flex gap-4 mb-8">
         {/* Search Bar */}
@@ -59,12 +59,12 @@ export function HomeScreen({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search for a movie to rate..."
-            className="w-full border border-border px-4 py-2 focus:outline-none focus:border-foreground"
+            className="w-full border border-red-700 px-4 py-2 focus:outline-none focus:border-red-800"
           />
           
           {/* Search Dropdown */}
           {showDropdown && searchResults.length > 0 && (
-            <div className="absolute z-50 w-full mt-1 bg-background border border-border shadow-lg max-h-96 overflow-y-auto">
+            <div className="absolute z-50 w-full mt-1 bg-black border border-border shadow-lg max-h-96 overflow-y-auto">
               {searchResults.map((movie) => {
                 const isRated = isMovieRated(movie.id);
                 return (
@@ -100,7 +100,7 @@ export function HomeScreen({
         
         <button
           onClick={onUpdatePreferences}
-          className="border border-border px-6 py-2 hover:bg-accent whitespace-nowrap"
+          className="border border-red-700 bg-red-700 px-6 py-2 hover:bg-red-800 whitespace-nowrap"
         >
           Update Preferences
         </button>
@@ -188,7 +188,7 @@ export function HomeScreen({
 
       {/* Discovery Mode */}
       <section>
-        <h2 className="mb-4">Discovery Mode</h2>
+        <h2 className="mb-4">Discover</h2>
         {discoveryMovies.length === 0 ? (
           <p className="text-muted-foreground">
             Explore more movies to discover new favorites.

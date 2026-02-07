@@ -8,8 +8,7 @@ import type { Movie, Preferences, MovieCsvRow } from './types';
 
 type Page = 'home' | 'preferences' | 'addMovies';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
-const POSTER_PLACEHOLDER = 'https://via.placeholder.com/300x450?text=No+Poster';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
 
 const toStringValue = (value: unknown) => {
   if (typeof value === 'string') return value;
@@ -33,6 +32,26 @@ const parsePrimaryGenre = (genres: string) => {
   return first || genres;
 };
 
+const mapCriteriaWeights = (prefs: Preferences): number[] => {
+  const baseCriteria = ['Cinematography', 'Plot', 'Pacing', 'Direction', 'Sound and Score'];
+  return baseCriteria.map((criterion) => {
+    const index = prefs.rankedCriteria.indexOf(criterion);
+    if (index === -1) return 0;
+    return baseCriteria.length - index;
+  });
+};
+
+const buildPosterUrl = (id: string) => `${API_BASE_URL}/poster/${encodeURIComponent(id)}`;
+
+const ensurePoster = (movie: Movie): Movie => {
+  const poster = buildPosterUrl(movie.id);
+  if (movie.poster === poster) return movie;
+  return {
+    ...movie,
+    poster,
+  };
+};
+
 const mapApiMovie = (row: MovieCsvRow): Movie => {
   const title = toStringValue(row.title);
   const releaseDate = toStringValue(row.release_date);
@@ -47,7 +66,7 @@ const mapApiMovie = (row: MovieCsvRow): Movie => {
     id: toStringValue(row.id),
     title,
     year: parseYear(releaseDate),
-    poster: POSTER_PLACEHOLDER,
+    poster: buildPosterUrl(toStringValue(row.id)),
     director: 'Unknown',
     genre: parsePrimaryGenre(toStringValue(row.genres)),
     ratings: {
@@ -63,7 +82,7 @@ const mapApiMovie = (row: MovieCsvRow): Movie => {
 
 export default function App() {
   const initialPreferences = getItem<Preferences>(STORAGE_KEYS.PREFERENCES);
-  const initialRatedMovies = getItem<Movie[]>(STORAGE_KEYS.RATED_MOVIES) || [];
+  const initialRatedMovies = (getItem<Movie[]>(STORAGE_KEYS.RATED_MOVIES) || []).map(ensurePoster);
   const initialPage: Page = initialPreferences
     ? (initialRatedMovies.length > 0 ? 'home' : 'addMovies')
     : 'preferences';
@@ -77,6 +96,8 @@ export default function App() {
   const [discoveryMovies, setDiscoveryMovies] = useState<Movie[]>([]);
   const [isLoadingMovies, setIsLoadingMovies] = useState(false);
   const [movieLoadError, setMovieLoadError] = useState<string | null>(null);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
   
   // Persist preferences when they change
   useEffect(() => {
@@ -85,8 +106,49 @@ export default function App() {
 
   // Persist rated movies when they change
   useEffect(() => {
-    saveItem(STORAGE_KEYS.RATED_MOVIES, ratedMovies);
+    saveItem(STORAGE_KEYS.RATED_MOVIES, ratedMovies.map(ensurePoster));
   }, [ratedMovies]);
+
+  const saveProfile = async (prefs: Preferences) => {
+    const payload = {
+      user_weights: mapCriteriaWeights(prefs),
+      preferred_genres: prefs.genres,
+      pacing_pref: prefs.pacingPreference.toLowerCase(),
+      discovery_mode: false,
+    };
+
+    const response = await fetch(`${API_BASE_URL}/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to save profile (${response.status})`);
+    }
+  };
+
+  const fetchRecommendations = async () => {
+    setIsLoadingRecommendations(true);
+    setRecommendationsError(null);
+    try {
+      if (!preferences) {
+        throw new Error('Please set preferences before fetching recommendations.');
+      }
+      await saveProfile(preferences);
+      const response = await fetch(`${API_BASE_URL}/recommend?top_n=10`);
+      const data = await response.json();
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || `Failed to fetch recommendations (${response.status})`);
+      }
+      const recs = (data.recommendations as MovieCsvRow[]).map(mapApiMovie);
+      setRecommendations(recs);
+    } catch (error) {
+      setRecommendationsError(error instanceof Error ? error.message : 'Failed to load recommendations');
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
+  };
 
   useEffect(() => {
     let isActive = true;
@@ -123,46 +185,27 @@ export default function App() {
     };
   }, []);
 
-  const generateRecommendations = (prefs: Preferences | null, rated: Movie[]): Movie[] => {
-    if (!prefs || rated.length === 0) return [];
-
-    // Simple mock: filter discovery movies by genre preference
-    const source = discoveryMovies.length > 0 ? discoveryMovies : movieDatabase;
-    const filtered = source.filter((movie) => {
-      const matchesGenre = prefs.genres.length === 0 || prefs.genres.includes(movie.genre || '');
-      return matchesGenre;
-    });
-
-    return filtered.map((movie) => ({
-      ...movie,
-      matchScore: 0.75 + Math.random() * 0.25,
-    })).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)).slice(0, 5);
-  };
-
-  const handlePreferencesSubmit = (prefs: Preferences) => {
+  const handlePreferencesSubmit = async (prefs: Preferences) => {
     setPreferences(prefs);
     
     // LOGIC: If the user has already rated movies, they aren't "new"
     // Skip the onboarding step and go straight to results.
     if (ratedMovies.length > 0) {
-      // Regenerate recommendations with the new preferences
-      const recs = generateRecommendations(prefs, ratedMovies);
-      setRecommendations(recs);
+      await fetchRecommendations();
       setCurrentPage('home');
     } else {
       setCurrentPage('addMovies');
     }
   };
 
-  const handleMoviesSubmit = (movies: Movie[]) => {
+  const handleMoviesSubmit = async (movies: Movie[]) => {
     const moviesWithDates = movies.map(movie => ({
       ...movie,
       dateRated: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
     }));
     setRatedMovies([...ratedMovies, ...moviesWithDates]);
     
-    const recs = generateRecommendations(preferences, [...ratedMovies, ...moviesWithDates]);
-    setRecommendations(recs);
+    await fetchRecommendations();
     
     setCurrentPage('home');
   };
@@ -171,7 +214,7 @@ export default function App() {
     setSelectedMovie(movie);
   };
 
-  const handleSaveRating = (ratings: Movie['ratings']) => {
+  const handleSaveRating = async (ratings: Movie['ratings']) => {
     if (!selectedMovie) return;
 
     const isAlreadyRated = ratedMovies.some(m => m.id === selectedMovie.id);
@@ -196,8 +239,14 @@ export default function App() {
       ? ratedMovies.map(m => m.id === selectedMovie.id ? { ...m, ratings } : m)
       : [...ratedMovies, { ...selectedMovie, ratings }];
     
-    const recs = generateRecommendations(preferences, updatedRated);
-    setRecommendations(recs);
+    await fetchRecommendations();
+  };
+
+  const handleRemoveRating = async (movieId: string) => {
+    const updatedRated = ratedMovies.filter((m) => m.id !== movieId);
+    setRatedMovies(updatedRated);
+    await fetchRecommendations();
+    setSelectedMovie(null);
   };
 
   const isMovieRated = (movie: Movie) => {
@@ -220,19 +269,25 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-black p-6">
       {/* PERSISTENT HEADER */}
-      <header className="mb-10 border-b-2 border-black pb-4">
-        <h1 className="text-2xl font-black uppercase tracking-tighter">CINEMATCH</h1>
-        <p className="text-xs text-gray-500 font-bold mt-1">
-          by absolute
+      <header className="mb-10 border-b-2 border-black pb-4 flex flex-col gap-1">
+        <p className="text-xs text-white font-bold uppercase tracking-wide">
+          ABSOLLUTE
         </p>
+        <h1 className="text-2xl text-red-700 font-black uppercase tracking-tighter">CINEMATCH</h1>
       </header>
 
       {/* DYNAMIC CONTENT */}
       <main>
         {isLoadingMovies && (
           <div className="mb-4 text-sm text-muted-foreground">Loading movies...</div>
+        )}
+        {isLoadingRecommendations && (
+          <div className="mb-4 text-sm text-muted-foreground">Loading recommendations...</div>
+        )}
+        {recommendationsError && (
+          <div className="mb-4 text-sm text-red-600">Failed to load recommendations: {recommendationsError}</div>
         )}
         {movieLoadError && (
           <div className="mb-4 text-sm text-red-600">Failed to load movies: {movieLoadError}</div>
@@ -271,6 +326,7 @@ export default function App() {
           isRated={isMovieRated(selectedMovie)}
           onClose={() => setSelectedMovie(null)}
           onSaveRating={handleSaveRating}
+          onRemoveRating={() => handleRemoveRating(selectedMovie.id)}
         />
       )}
     </div>
