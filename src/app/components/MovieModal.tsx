@@ -128,7 +128,14 @@ export function MovieModal({ movie, isRated, onClose, onSaveRating, onRemoveRati
             <div>
               <h2 className="mb-1">{movie.title}</h2>
               <p className="text-sm text-muted-foreground">
-                {movie.year} • {movie.genre || 'Unknown'} • Dir. {movie.director}
+                {movie.year} • {
+                  Array.isArray(movie.genre) 
+                    ? movie.genre.join(', ')
+                    : movie.genre
+                        .replace(/[\[\]'"]/g, '')             
+                        .replace(/,/g, ', ')                  
+                        .replace(/([a-z])([A-Z])/g, '$1 $2')
+                } • Dir. {movie.director}
               </p>
               {movie.matchScore && (
                 <p className="text-sm mt-2">
