@@ -1,158 +1,134 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PreferencesForm } from './components/PreferencesForm';
 import { LikedMoviesInput } from './components/LikedMoviesInput';
 import { HomeScreen } from './components/HomeScreen';
 import { MovieModal } from './components/MovieModal';
-import React from 'react';
+import { STORAGE_KEYS, saveItem, getItem } from './utils/storage';
+import type { Movie, Preferences, MovieCsvRow } from './types';
 
 type Page = 'home' | 'preferences' | 'addMovies';
 
-interface Preferences {
-  genres: string[];
-  rankedCriteria: string[];
-  unimportantCriteria: string[];
-  pacingPreference: 'Fast' | 'Slow';
-}
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
+const POSTER_PLACEHOLDER = 'https://via.placeholder.com/300x450?text=No+Poster';
 
-interface Movie {
-  id: string;
-  title: string;
-  year: string;
-  poster: string;
-  director: string;
-  genre?: string;
-  ratings: {
-    overall: number;
-    cinematography: number;
-    plot: number;
-    pacing: number;
-    direction: number;
-    sound: number;
+const toStringValue = (value: unknown) => {
+  if (typeof value === 'string') return value;
+  if (value == null) return '';
+  return String(value);
+};
+
+const toNumberValue = (value: unknown) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const parseYear = (releaseDate: string) => {
+  if (!releaseDate) return '';
+  return releaseDate.slice(0, 4);
+};
+
+const parsePrimaryGenre = (genres: string) => {
+  if (!genres) return undefined;
+  const first = genres.split('|')[0]?.trim();
+  return first || genres;
+};
+
+const mapApiMovie = (row: MovieCsvRow): Movie => {
+  const title = toStringValue(row.title);
+  const releaseDate = toStringValue(row.release_date);
+  const cinematography = toNumberValue(row.cinematography_rating);
+  const plot = toNumberValue(row.plot_rating);
+  const pacing = toNumberValue(row.pacing_rating);
+  const direction = toNumberValue(row.direction_rating);
+  const sound = toNumberValue(row.music_rating);
+  const overall = toNumberValue(row.overall) || (cinematography + plot + pacing + direction + sound) / 5;
+
+  return {
+    id: toStringValue(row.id),
+    title,
+    year: parseYear(releaseDate),
+    poster: POSTER_PLACEHOLDER,
+    director: 'Unknown',
+    genre: parsePrimaryGenre(toStringValue(row.genres)),
+    ratings: {
+      overall,
+      cinematography,
+      plot,
+      pacing,
+      direction,
+      sound,
+    },
   };
-  matchScore?: number;
-  dateRated?: string;
-}
-
-// Mock database for discovery mode
-const DISCOVERY_MOVIES: Movie[] = [
-  {
-    id: 'tt1',
-    title: 'Blade Runner 2049',
-    year: '2017',
-    director: 'Denis Villeneuve',
-    genre: 'Sci-Fi',
-    poster: 'https://m.media-amazon.com/images/M/MV5BNzA1Njg4NzYxOV5BMl5BanBnXkFtZTgwODk5NjU3MzI@._V1_SX300.jpg',
-    ratings: { overall: 8.0, cinematography: 0, plot: 0, pacing: 0, direction: 0, sound: 0 },
-  },
-  {
-    id: 'tt2',
-    title: 'Parasite',
-    year: '2019',
-    director: 'Bong Joon Ho',
-    genre: 'Drama',
-    poster: 'https://m.media-amazon.com/images/M/MV5BYWZjMjk3ZTItODQ2ZC00NTY5LWE0ZDYtZTI3MjcwN2Q5NTVkXkEyXkFqcGdeQXVyODk4OTc3MTY@._V1_SX300.jpg',
-    ratings: { overall: 8.6, cinematography: 0, plot: 0, pacing: 0, direction: 0, sound: 0 },
-  },
-  {
-    id: 'tt3',
-    title: 'Whiplash',
-    year: '2014',
-    director: 'Damien Chazelle',
-    genre: 'Drama',
-    poster: 'https://m.media-amazon.com/images/M/MV5BOTA5NDZlZGUtMjAxOS00YTRkLTkwYmMtYWQ0NWEwZDZiNjEzXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg',
-    ratings: { overall: 8.5, cinematography: 0, plot: 0, pacing: 0, direction: 0, sound: 0 },
-  },
-  {
-    id: 'tt4',
-    title: 'Everything Everywhere All at Once',
-    year: '2022',
-    director: 'Daniel Kwan, Daniel Scheinert',
-    genre: 'Sci-Fi',
-    poster: 'https://m.media-amazon.com/images/M/MV5BYTdiOTIyZTQtNmQ1OS00NjZlLWIyMTgtYzk5Y2M3ZDVmMDk1XkEyXkFqcGdeQXVyMTAzMDg4NzU0._V1_SX300.jpg',
-    ratings: { overall: 7.8, cinematography: 0, plot: 0, pacing: 0, direction: 0, sound: 0 },
-  },
-  {
-    id: 'tt5',
-    title: 'Dune',
-    year: '2021',
-    director: 'Denis Villeneuve',
-    genre: 'Sci-Fi',
-    poster: 'https://m.media-amazon.com/images/M/MV5BN2FjNmEyNWMtYzM0ZS00NjIyLTg5YzYtYThlMGVjNzE1OGViXkEyXkFqcGdeQXVyMTkxNjUyNQ@@._V1_SX300.jpg',
-    ratings: { overall: 8.0, cinematography: 0, plot: 0, pacing: 0, direction: 0, sound: 0 },
-  },
-  {
-    id: 'tt6',
-    title: 'The Grand Budapest Hotel',
-    year: '2014',
-    director: 'Wes Anderson',
-    genre: 'Comedy',
-    poster: 'https://m.media-amazon.com/images/M/MV5BMzM5NjUxOTEyMl5BMl5BanBnXkFtZTgwNjEyMDM0MDE@._V1_SX300.jpg',
-    ratings: { overall: 8.1, cinematography: 0, plot: 0, pacing: 0, direction: 0, sound: 0 },
-  },
-];
-
-// Complete searchable movie database
-const MOVIE_DATABASE: Movie[] = [
-  ...DISCOVERY_MOVIES,
-  {
-    id: 'tt7',
-    title: 'The Matrix',
-    year: '1999',
-    director: 'Lana & Lilly Wachowski',
-    genre: 'Sci-Fi',
-    poster: 'https://m.media-amazon.com/images/M/MV5BNzQzOTk3MTAtOTRhS000ZTMwLThkZmYtMzBiNzllYzY0MzdkXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg',
-    ratings: { overall: 8.7, cinematography: 0, plot: 0, pacing: 0, direction: 0, sound: 0 },
-  },
-  {
-    id: 'tt8',
-    title: 'The Godfather',
-    year: '1972',
-    director: 'Francis Ford Coppola',
-    genre: 'Drama',
-    poster: 'https://m.media-amazon.com/images/M/MV5BM2MyNjYxNmUtYTAwNi00MTYxLWJmNWYtYzZlODY3ZTk3OTFlXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg',
-    ratings: { overall: 9.2, cinematography: 0, plot: 0, pacing: 0, direction: 0, sound: 0 },
-  },
-  {
-    id: 'tt9',
-    title: 'Inception',
-    year: '2010',
-    director: 'Christopher Nolan',
-    genre: 'Sci-Fi',
-    poster: 'https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg',
-    ratings: { overall: 8.8, cinematography: 0, plot: 0, pacing: 0, direction: 0, sound: 0 },
-  },
-  {
-    id: 'tt10',
-    title: 'Interstellar',
-    year: '2014',
-    director: 'Christopher Nolan',
-    genre: 'Sci-Fi',
-    poster: 'https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg',
-    ratings: { overall: 8.6, cinematography: 0, plot: 0, pacing: 0, direction: 0, sound: 0 },
-  },
-  {
-    id: 'tt11',
-    title: 'Spider-Man: Across the Spider-Verse',
-    year: '2023',
-    director: 'Joaquim Dos Santos',
-    genre: 'Action',
-    poster: 'https://m.media-amazon.com/images/M/MV5BMzI0NmVkMjEtYmY4MS00ZDMxLTlkZmEtMzU4MDQxYTMzMjU2XkEyXkFqcGdeQXVyMzQ0MzA0NTM@._V1_SX300.jpg',
-    ratings: { overall: 8.7, cinematography: 0, plot: 0, pacing: 0, direction: 0, sound: 0 },
-  },
-];
+};
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('preferences');
-  const [preferences, setPreferences] = useState<Preferences | null>(null);
-  const [ratedMovies, setRatedMovies] = useState<Movie[]>([]);
+  const initialPreferences = getItem<Preferences>(STORAGE_KEYS.PREFERENCES);
+  const initialRatedMovies = getItem<Movie[]>(STORAGE_KEYS.RATED_MOVIES) || [];
+  const initialPage: Page = initialPreferences
+    ? (initialRatedMovies.length > 0 ? 'home' : 'addMovies')
+    : 'preferences';
+
+  const [currentPage, setCurrentPage] = useState<Page>(initialPage);
+  const [preferences, setPreferences] = useState<Preferences | null>(initialPreferences);
+  const [ratedMovies, setRatedMovies] = useState<Movie[]>(initialRatedMovies);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [recommendations, setRecommendations] = useState<Movie[]>([]);
+  const [movieDatabase, setMovieDatabase] = useState<Movie[]>([]);
+  const [discoveryMovies, setDiscoveryMovies] = useState<Movie[]>([]);
+  const [isLoadingMovies, setIsLoadingMovies] = useState(false);
+  const [movieLoadError, setMovieLoadError] = useState<string | null>(null);
+  
+  // Persist preferences when they change
+  useEffect(() => {
+    saveItem(STORAGE_KEYS.PREFERENCES, preferences);
+  }, [preferences]);
+
+  // Persist rated movies when they change
+  useEffect(() => {
+    saveItem(STORAGE_KEYS.RATED_MOVIES, ratedMovies);
+  }, [ratedMovies]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadMovies = async () => {
+      setIsLoadingMovies(true);
+      setMovieLoadError(null);
+      try {
+        const response = await fetch(`${API_BASE_URL}/movies`);
+        if (!response.ok) {
+          throw new Error(`Failed to load movies (${response.status})`);
+        }
+        const data = (await response.json()) as MovieCsvRow[];
+        const mapped = data.map(mapApiMovie);
+        if (isActive) {
+          setMovieDatabase(mapped);
+          setDiscoveryMovies(mapped.slice(0, 18));
+        }
+      } catch (error) {
+        if (isActive) {
+          setMovieLoadError(error instanceof Error ? error.message : 'Failed to load movies');
+        }
+      } finally {
+        if (isActive) {
+          setIsLoadingMovies(false);
+        }
+      }
+    };
+
+    loadMovies();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const generateRecommendations = (prefs: Preferences | null, rated: Movie[]): Movie[] => {
     if (!prefs || rated.length === 0) return [];
 
     // Simple mock: filter discovery movies by genre preference
-    const filtered = DISCOVERY_MOVIES.filter((movie) => {
+    const source = discoveryMovies.length > 0 ? discoveryMovies : movieDatabase;
+    const filtered = source.filter((movie) => {
       const matchesGenre = prefs.genres.length === 0 || prefs.genres.includes(movie.genre || '');
       return matchesGenre;
     });
@@ -236,7 +212,7 @@ export default function App() {
       setSelectedMovie(ratedMovie);
     } else {
       // Find movie in database and open modal for new rating
-      const movie = MOVIE_DATABASE.find(m => m.id === movieId);
+      const movie = movieDatabase.find(m => m.id === movieId);
       if (movie) {
         setSelectedMovie(movie);
       }
@@ -255,6 +231,12 @@ export default function App() {
 
       {/* DYNAMIC CONTENT */}
       <main>
+        {isLoadingMovies && (
+          <div className="mb-4 text-sm text-muted-foreground">Loading movies...</div>
+        )}
+        {movieLoadError && (
+          <div className="mb-4 text-sm text-red-600">Failed to load movies: {movieLoadError}</div>
+        )}
         {currentPage === 'preferences' && (
           <PreferencesForm onSubmit={handlePreferencesSubmit} />
         )}
@@ -265,6 +247,7 @@ export default function App() {
             // If they click back, they go to preferences; 
             // if they already have movies, they could also go home.
             onBack={() => setCurrentPage('preferences')} 
+            movieDatabase={movieDatabase}
           />
         )}
 
@@ -272,8 +255,8 @@ export default function App() {
           <HomeScreen
             ratedMovies={ratedMovies}
             recommendations={recommendations}
-            discoveryMovies={DISCOVERY_MOVIES}
-            movieDatabase={MOVIE_DATABASE}
+            discoveryMovies={discoveryMovies}
+            movieDatabase={movieDatabase}
             onMovieClick={handleMovieClick}
             onSearchMovieSelect={handleSearchMovieSelect}
             onUpdatePreferences={() => setCurrentPage('preferences')}

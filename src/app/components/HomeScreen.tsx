@@ -1,24 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-
-interface Movie {
-  id: string;
-  title: string;
-  year: string;
-  poster: string;
-  director: string;
-  genre?: string;
-  ratings: {
-    overall: number;
-    cinematography: number;
-    plot: number;
-    pacing: number;
-    direction: number;
-    sound: number;
-  };
-  matchScore?: number;
-  dateRated?: string;
-}
+import type { Movie } from '../types';
 
 interface HomeScreenProps {
   ratedMovies: Movie[];

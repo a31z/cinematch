@@ -2,14 +2,10 @@ import { useState } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { X, Check, GripVertical } from 'lucide-react';
+import type { Preferences } from '../types';
 
 interface PreferencesFormProps {
-  onSubmit: (preferences: {
-    genres: string[];
-    rankedCriteria: string[];
-    unimportantCriteria: string[];
-    pacingPreference: 'Fast' | 'Slow';
-  }) => void;
+  onSubmit: (preferences: Preferences) => void;
 }
 
 const GENRES = [
