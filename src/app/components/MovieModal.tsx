@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import React from 'react';
 import { useState } from 'react';
 
 interface Movie {
@@ -38,33 +39,66 @@ const StarRating = ({
   onChange?: (val: number) => void;
   readOnly?: boolean;
 }) => {
+  // Logic for the triple-cycle
+  const handleStarClick = (starIndex: number) => {
+    if (readOnly || !onChange) return;
+
+    let newValue = 0;
+    if (value === starIndex) {
+      newValue = starIndex - 0.5; // If currently Full, go to Half
+    } else if (value === starIndex - 0.5) {
+      newValue = starIndex - 1;   // If currently Half, go to Empty
+    } else {
+      newValue = starIndex;       // If lower or empty, go to Full
+    }
+    onChange(newValue);
+  };
+
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-sm font-medium min-w-[140px]">{label}</span>
       <div className={`flex gap-1 ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}>
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            type="button"
-            disabled={readOnly}
-            onClick={() => !readOnly && onChange && onChange(star)}
-            className={`focus:outline-none ${!readOnly && 'hover:scale-110'}`}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill={star <= Math.round(value) ? '#FFD700' : 'none'}
-              stroke={star <= Math.round(value) ? '#FFD700' : '#CBD5E1'}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        {[1, 2, 3, 4, 5].map((star) => {
+          // Determine if this specific star is Full, Half, or Empty
+          const isFull = value >= star;
+          const isHalf = value === star - 0.5;
+
+          return (
+            <button
+              key={star}
+              type="button"
+              disabled={readOnly}
+              onClick={() => handleStarClick(star)}
+              className={`focus:outline-none ${!readOnly && 'hover:scale-110'}`}
             >
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-          </button>
-        ))}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                stroke={isFull || isHalf ? '#FFD700' : '#CBD5E1'}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ fill: 'none' }} 
+              >
+                {/* Background (Empty) Star */}
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                
+                {/* Yellow Fill (Conditional) */}
+                {(isFull || isHalf) && (
+                  <path
+                    fill="#FFD700"
+                    d={isFull 
+                      ? "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-5.82 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" // Full
+                      : "M12 2v15.77l-5.82 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" // Half (Left Side Only)
+                    }
+                  />
+                )}
+              </svg>
+            </button>
+          );
+        })}
       </div>
       <span className="text-sm text-muted-foreground w-8">{value.toFixed(1)}</span>
     </div>

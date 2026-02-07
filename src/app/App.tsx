@@ -3,6 +3,7 @@ import { PreferencesForm } from './components/PreferencesForm';
 import { LikedMoviesInput } from './components/LikedMoviesInput';
 import { HomeScreen } from './components/HomeScreen';
 import { MovieModal } from './components/MovieModal';
+import React from 'react';
 
 type Page = 'home' | 'preferences' | 'addMovies';
 
@@ -164,7 +165,17 @@ export default function App() {
 
   const handlePreferencesSubmit = (prefs: Preferences) => {
     setPreferences(prefs);
-    setCurrentPage('addMovies');
+    
+    // LOGIC: If the user has already rated movies, they aren't "new"
+    // Skip the onboarding step and go straight to results.
+    if (ratedMovies.length > 0) {
+      // Regenerate recommendations with the new preferences
+      const recs = generateRecommendations(prefs, ratedMovies);
+      setRecommendations(recs);
+      setCurrentPage('home');
+    } else {
+      setCurrentPage('addMovies');
+    }
   };
 
   const handleMoviesSubmit = (movies: Movie[]) => {
@@ -251,7 +262,9 @@ export default function App() {
         {currentPage === 'addMovies' && (
           <LikedMoviesInput
             onSubmit={handleMoviesSubmit}
-            onBack={() => setCurrentPage(preferences ? 'home' : 'preferences')}
+            // If they click back, they go to preferences; 
+            // if they already have movies, they could also go home.
+            onBack={() => setCurrentPage('preferences')} 
           />
         )}
 
