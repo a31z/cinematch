@@ -45,4 +45,5 @@ export interface MovieCsvRow {
   tags: string;
   overall: string;
   pacing: string;
+  director: string;
 }

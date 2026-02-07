@@ -61,13 +61,14 @@ const mapApiMovie = (row: MovieCsvRow): Movie => {
   const direction = toNumberValue(row.direction_rating);
   const sound = toNumberValue(row.music_rating);
   const overall = toNumberValue(row.overall) || (cinematography + plot + pacing + direction + sound) / 5;
+  const director = toStringValue(row.director) || 'Unknown';
 
   return {
     id: toStringValue(row.id),
     title,
     year: parseYear(releaseDate),
     poster: buildPosterUrl(toStringValue(row.id)),
-    director: 'Unknown',
+    director: director,
     genre: parsePrimaryGenre(toStringValue(row.genres)),
     ratings: {
       overall,
@@ -148,6 +149,26 @@ export default function App() {
     } finally {
       setIsLoadingRecommendations(false);
     }
+  };
+
+  const saveRatingToBackend = async (movieId: string, rating: number) => {
+    const numericId = Number.parseInt(movieId, 10);
+    if (!Number.isFinite(numericId)) return;
+
+    await fetch(`${API_BASE_URL}/ratings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movie_id: numericId, rating }),
+    });
+  };
+
+  const removeRatingFromBackend = async (movieId: string) => {
+    const numericId = Number.parseInt(movieId, 10);
+    if (!Number.isFinite(numericId)) return;
+
+    await fetch(`${API_BASE_URL}/ratings/${numericId}`, {
+      method: 'DELETE',
+    });
   };
 
   useEffect(() => {
@@ -239,12 +260,14 @@ export default function App() {
       ? ratedMovies.map(m => m.id === selectedMovie.id ? { ...m, ratings } : m)
       : [...ratedMovies, { ...selectedMovie, ratings }];
     
+    await saveRatingToBackend(selectedMovie.id, ratings.overall);
     await fetchRecommendations();
   };
 
   const handleRemoveRating = async (movieId: string) => {
     const updatedRated = ratedMovies.filter((m) => m.id !== movieId);
     setRatedMovies(updatedRated);
+    await removeRatingFromBackend(movieId);
     await fetchRecommendations();
     setSelectedMovie(null);
   };
