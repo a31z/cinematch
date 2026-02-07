@@ -137,6 +137,11 @@ export function MovieModal({ movie, isRated, onClose, onSaveRating, onRemoveRati
                         .replace(/([a-z])([A-Z])/g, '$1 $2')
                 } • Dir. {movie.director}
               </p>
+              {movie.overview && (
+                <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                  {movie.overview}
+                </p>
+              )}
               {movie.matchScore && (
                 <p className="text-sm mt-2">
                   <span className="font-medium">Match Score:</span>{' '}

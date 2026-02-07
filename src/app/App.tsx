@@ -70,6 +70,7 @@ const mapApiMovie = (row: MovieCsvRow): Movie => {
     poster: buildPosterUrl(toStringValue(row.id)),
     director: director,
     genre: parsePrimaryGenre(toStringValue(row.genres)),
+    overview: toStringValue(row.overview),
     ratings: {
       overall,
       cinematography,
@@ -316,7 +317,10 @@ export default function App() {
           <div className="mb-4 text-sm text-red-600">Failed to load movies: {movieLoadError}</div>
         )}
         {currentPage === 'preferences' && (
-          <PreferencesForm onSubmit={handlePreferencesSubmit} />
+          <PreferencesForm
+            onSubmit={handlePreferencesSubmit}
+            initialPreferences={preferences ?? undefined}
+          />
         )}
 
         {currentPage === 'addMovies' && (

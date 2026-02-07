@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { X, Check, GripVertical } from 'lucide-react';
@@ -6,6 +6,7 @@ import type { Preferences } from '../types';
 
 interface PreferencesFormProps {
   onSubmit: (preferences: Preferences) => void;
+  initialPreferences?: Preferences;
 }
 
 const GENRES = [
@@ -160,11 +161,29 @@ function DropZone({ area, criteria, moveCriterion, pacingPreference, onPacingCha
   );
 }
 
-function PreferencesFormContent({ onSubmit }: PreferencesFormProps) {
-  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-  const [rankedCriteria, setRankedCriteria] = useState<string[]>(DEFAULT_CRITERIA);
-  const [unimportantCriteria, setUnimportantCriteria] = useState<string[]>([]);
-  const [pacingPreference, setPacingPreference] = useState<'Fast' | 'Slow'>('Slow');
+function PreferencesFormContent({ onSubmit, initialPreferences }: PreferencesFormProps) {
+  const [selectedGenres, setSelectedGenres] = useState<string[]>(
+    initialPreferences?.genres ?? []
+  );
+  const [rankedCriteria, setRankedCriteria] = useState<string[]>(
+    initialPreferences?.rankedCriteria?.length ? initialPreferences.rankedCriteria : DEFAULT_CRITERIA
+  );
+  const [unimportantCriteria, setUnimportantCriteria] = useState<string[]>(
+    initialPreferences?.unimportantCriteria ?? []
+  );
+  const [pacingPreference, setPacingPreference] = useState<'Fast' | 'Slow'>(
+    initialPreferences?.pacingPreference ?? 'Slow'
+  );
+
+  useEffect(() => {
+    if (!initialPreferences) return;
+    setSelectedGenres(initialPreferences.genres ?? []);
+    setRankedCriteria(
+      initialPreferences.rankedCriteria?.length ? initialPreferences.rankedCriteria : DEFAULT_CRITERIA
+    );
+    setUnimportantCriteria(initialPreferences.unimportantCriteria ?? []);
+    setPacingPreference(initialPreferences.pacingPreference ?? 'Slow');
+  }, [initialPreferences]);
 
   const toggleGenre = (genre: string) => {
     if (selectedGenres.includes(genre)) {

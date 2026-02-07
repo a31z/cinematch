@@ -23,6 +23,7 @@ export interface Movie {
   poster: string;
   director: string;
   genre?: string;
+  overview?: string;
   ratings: MovieRatings;
   matchScore?: number;
   dateRated?: string;
