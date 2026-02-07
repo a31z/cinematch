@@ -1,10 +1,4 @@
-interface Movie {
-  title: string;
-  year: number;
-  genre: string;
-  rating: number;
-  matchScore: number;
-}
+import type { Movie } from '../types';
 
 interface RecommendationsPageProps {
   recommendations: Movie[];
@@ -35,16 +29,18 @@ export function RecommendationsPage({
               <div>
                 <h3>{movie.title}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {movie.year} • {movie.genre}
+                  {movie.year} â€¢ {movie.genre || 'Unknown'}
                 </p>
               </div>
               <div className="text-right">
                 <div className="text-sm text-muted-foreground">Match</div>
-                <div>{Math.round(movie.matchScore * 100)}%</div>
+                <div>
+                  {movie.matchScore != null ? `${Math.round(movie.matchScore * 100)}%` : '—'}
+                </div>
               </div>
             </div>
             <div className="text-sm">
-              Average Rating: {movie.rating.toFixed(1)}/10
+              Average Rating: {movie.ratings.overall.toFixed(1)}/10
             </div>
           </button>
         ))}

@@ -1,77 +1,11 @@
 import React from "react";
 import { useState, useEffect } from "react";
-
-// --- REPLACE API KEY ---
-// const API_KEY = 'YOUR_API_KEY';
-
-// --- MOCK DATA ---
-const SAMPLE_DATABASE = [
-  {
-    Title: "The Matrix",
-    Year: "1999",
-    Director: "Lana & Lilly Wachowski",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BNzQzOTk3MTAtOTRhS000ZTMwLThkZmYtMzBiNzllYzY0MzdkXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
-    imdbID: "tt7",
-  },
-  {
-    Title: "The Godfather",
-    Year: "1972",
-    Director: "Francis Ford Coppola",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BM2MyNjYxNmUtYTAwNi00MTYxLWJmNWYtYzZlODY3ZTk3OTFlXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
-    imdbID: "tt8",
-  },
-  {
-    Title: "Inception",
-    Year: "2010",
-    Director: "Christopher Nolan",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
-    imdbID: "tt9",
-  },
-  {
-    Title: "Interstellar",
-    Year: "2014",
-    Director: "Christopher Nolan",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg",
-    imdbID: "tt10",
-  },
-  {
-    Title: "Spider-Man: Across the Spider-Verse",
-    Year: "2023",
-    Director: "Joaquim Dos Santos",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BMzI0NmVkMjEtYmY4MS00ZDMxLTlkZmEtMzU4MDQxYTMzMjU2XkEyXkFqcGdeQXVyMzQ0MzA0NTM@._V1_SX300.jpg",
-    imdbID: "tt11",
-  },
-];
-
-// --- TYPES ---
-
-interface MovieRatings {
-  overall: number;
-  cinematography: number;
-  plot: number;
-  pacing: number;
-  direction: number;
-  sound: number;
-}
-
-interface Movie {
-  id: string;
-  title: string;
-  year: string;
-  poster: string;
-  director: string;
-  ratings: MovieRatings;
-  isSaved?: boolean; // New property to track state
-}
+import type { Movie, MovieRatings } from "../types";
 
 interface LikedMoviesInputProps {
   onSubmit: (movies: Movie[]) => void;
   onBack: () => void;
+  movieDatabase: Movie[];
 }
 
 // --- HELPER COMPONENT: STAR RATING ---
@@ -163,38 +97,39 @@ const StarRating = ({
 };
 
 // --- MAIN COMPONENT ---
-export function LikedMoviesInput({ onSubmit, onBack }: LikedMoviesInputProps) {
+export function LikedMoviesInput({ onSubmit, onBack, movieDatabase }: LikedMoviesInputProps) {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<typeof SAMPLE_DATABASE>([]);
+  const [results, setResults] = useState<Movie[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Search Logic
   useEffect(() => {
     if (query.length > 1) {
-      const filtered = SAMPLE_DATABASE.filter((m) =>
-        m.Title.toLowerCase().includes(query.toLowerCase())
-      );
+      const filtered = movieDatabase
+        .filter((m) => m.title.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 12);
       setResults(filtered);
       setShowDropdown(true);
     } else {
       setResults([]);
       setShowDropdown(false);
     }
-  }, [query]);
+  }, [query, movieDatabase]);
 
-  const addMovie = (item: (typeof SAMPLE_DATABASE)[0]) => {
-    if (movies.some((m) => m.id === item.imdbID)) {
+  const addMovie = (item: Movie) => {
+    if (movies.some((m) => m.id === item.id)) {
       setQuery("");
       return;
     }
 
     const newMovie: Movie = {
-      id: item.imdbID,
-      title: item.Title,
-      year: item.Year,
-      poster: item.Poster,
-      director: item.Director,
+      id: item.id,
+      title: item.title,
+      year: item.year,
+      poster: item.poster,
+      director: item.director,
+      genre: item.genre,
       isSaved: false, // Default to not saved (editing mode)
       ratings: {
         overall: 0,
@@ -310,21 +245,21 @@ export function LikedMoviesInput({ onSubmit, onBack }: LikedMoviesInputProps) {
           <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-none shadow-xl overflow-hidden">
             {results.map((item) => (
               <button
-                key={item.imdbID}
+                key={item.id}
                 onClick={() => addMovie(item)}
                 className="flex items-center gap-4 w-full p-3 hover:bg-blue-50 transition-colors text-left border-b border-gray-100 last:border-0"
               >
                 <img
-                  src={item.Poster}
-                  alt={item.Title}
+                  src={item.poster}
+                  alt={item.title}
                   className="w-10 h-14 object-cover rounded"
                 />
                 <div className="flex-1">
-                  <div className="font-bold text-gray-900">{item.Title}</div>
+                  <div className="font-bold text-gray-900">{item.title}</div>
                   <div className="flex gap-2 text-sm text-gray-500">
-                    <span>{item.Year}</span>
+                    <span>{item.year}</span>
                     <span>•</span>
-                    <span className="italic">{item.Director}</span>
+                    <span className="italic">{item.director}</span>
                   </div>
                 </div>
               </button>

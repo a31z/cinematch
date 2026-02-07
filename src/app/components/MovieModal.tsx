@@ -1,31 +1,14 @@
 import { X } from 'lucide-react';
 import React from 'react';
 import { useState } from 'react';
-
-interface Movie {
-  id: string;
-  title: string;
-  year: string;
-  poster: string;
-  director: string;
-  genre?: string;
-  ratings: {
-    overall: number;
-    cinematography: number;
-    plot: number;
-    pacing: number;
-    direction: number;
-    sound: number;
-  };
-  matchScore?: number;
-  dateRated?: string;
-}
+import type { Movie } from '../types';
 
 interface MovieModalProps {
   movie: Movie;
   isRated: boolean;
   onClose: () => void;
   onSaveRating: (ratings: Movie['ratings']) => void;
+  onRemoveRating: () => void;
 }
 
 const StarRating = ({
@@ -105,7 +88,7 @@ const StarRating = ({
   );
 };
 
-export function MovieModal({ movie, isRated, onClose, onSaveRating }: MovieModalProps) {
+export function MovieModal({ movie, isRated, onClose, onSaveRating, onRemoveRating }: MovieModalProps) {
   const [isEditing, setIsEditing] = useState(!isRated);
   const [ratings, setRatings] = useState(movie.ratings);
 
@@ -205,12 +188,20 @@ export function MovieModal({ movie, isRated, onClose, onSaveRating }: MovieModal
           {/* Action Buttons */}
           <div className="flex justify-end gap-4">
             {isRated && !isEditing ? (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="bg-primary text-primary-foreground px-6 py-2 font-bold"
-              >
-                Edit Rating
-              </button>
+              <>
+                <button
+                  onClick={onRemoveRating}
+                  className="border border-border px-6 py-2 text-red-600 hover:bg-red-50"
+                >
+                  Remove Rating
+                </button>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="bg-primary text-primary-foreground px-6 py-2 font-bold"
+                >
+                  Edit Rating
+                </button>
+              </>
             ) : (
               <>
                 {/* Cancel Button - Now First */}

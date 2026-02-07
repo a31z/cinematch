@@ -1,12 +1,5 @@
 import { useState } from 'react';
-
-interface Movie {
-  title: string;
-  year: number;
-  genre: string;
-  rating: number;
-  matchScore: number;
-}
+import type { Movie } from '../types';
 
 interface RatingFormProps {
   movie: Movie;
@@ -30,11 +23,11 @@ export function RatingForm({ movie, onSubmit, onBack }: RatingFormProps) {
       <div className="border border-border p-6 mb-6">
         <h2 className="mb-2">{movie.title}</h2>
         <p className="text-muted-foreground mb-4">
-          {movie.year} • {movie.genre} • Avg Rating: {movie.rating.toFixed(1)}/10
+          {movie.year} â€¢ {movie.genre || 'Unknown'} â€¢ Avg Rating: {movie.ratings.overall.toFixed(1)}/10
         </p>
         <div className="text-sm">
           <span className="text-muted-foreground">Match Score:</span>{' '}
-          {Math.round(movie.matchScore * 100)}%
+          {movie.matchScore != null ? `${Math.round(movie.matchScore * 100)}%` : '—'}
         </div>
       </div>
 
@@ -79,7 +72,7 @@ export function RatingForm({ movie, onSubmit, onBack }: RatingFormProps) {
           >
             Back to Recommendations
           </button>
-        
+
           <button
             type="submit"
             className="bg-primary text-primary-foreground px-6 py-2 font-bold"
